@@ -1,0 +1,28 @@
+To: <recipient@example.org>
+From: <sender@example.org>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="mpe227fd58c8b340c5986162040eaa34cd"
+Subject: Test
+
+ This is a multi-part message in MIME format.
+ 
+--mpe227fd58c8b340c5986162040eaa34cd
+Content-Type: text/plain; charset=charset="utf-8" 
+
+This is the plain text body.
+It has a really bad charset on the content-type header line.
+
+--mpe227fd58c8b340c5986162040eaa34cd
+Content-Type: text/html; charset="cp1252" 
+Content-Transfer-Encoding: Quoted-printable
+
+<html>
+<head>
+   <title>A Title</title>
+</head>
+<body>
+<p>This is the html text body. It is very ordinary</p>
+</body>
+</html>
+
+--mpe227fd58c8b340c5986162040eaa34cd--

@@ -44,6 +44,8 @@ import javax.mail.internet.MimePart;
 import javax.mail.internet.MimeUtility;
 import javax.mail.internet.ParseException;
 import javax.mail.util.ByteArrayDataSource;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Parses a MimeMessage and stores the individual parts such a plain text,
@@ -53,14 +55,19 @@ import javax.mail.util.ByteArrayDataSource;
  */
 public class MimeMessageParser
 {
+    /** Matches default in com.sun.mail.handlers.text_plain.java after mapping */
+    public final static String DEFAULT_FALLBACK_CHARSET = "ISO-8859-1";
+
     /** The MimeMessage to convert */
     private final MimeMessage mimeMessage;
 
     /** Plain mail content from MimeMessage */
     private String plainContent;
+    private String plainCharset = null;
 
     /** Html mail content from MimeMessage */
     private String htmlContent;
+    private String htmlCharset = null;
 
     /** List of attachments of MimeMessage */
     private final List<DataSource> attachmentList;
@@ -177,14 +184,16 @@ public class MimeMessageParser
         if (isMimeType(part, "text/plain") && plainContent == null
                 && !Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition()))
         {
-            plainContent = (String) part.getContent();
+            plainCharset = new ContentType(part.getContentType()).getParameter("charset");
+            plainContent = handleContent(part.getContent(), plainCharset);
         }
         else
         {
             if (isMimeType(part, "text/html") && htmlContent == null
                     && !Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition()))
             {
-                htmlContent = (String) part.getContent();
+                htmlCharset = new ContentType(part.getContentType()).getParameter("charset");
+                htmlContent = handleContent(part.getContent(), htmlCharset);
             }
             else
             {
@@ -253,6 +262,35 @@ public class MimeMessageParser
         {
             return part.getContentType().equalsIgnoreCase(mimeType);
         }
+    }
+
+    /**
+     * Handle the interpretation of the MimePart content java object
+     *
+     * @param content the content from the MimePart
+     * @return content as a string
+     */
+    private String handleContent(Object content, String charset) throws IOException, MessagingException
+    {
+        if (content instanceof String)
+        {
+            return (String)content;
+        }
+
+        if (content instanceof InputStream)
+        {
+            if (charset == null) {
+                charset = DEFAULT_FALLBACK_CHARSET;
+            }
+            byte[] contentBytes = getContent((InputStream)content);
+            try {
+                return new String(contentBytes, charset);
+            } catch (UnsupportedEncodingException uee) {
+                return new String(contentBytes, DEFAULT_FALLBACK_CHARSET);
+            }
+        }
+
+        return content.toString();
     }
 
     /**
@@ -333,6 +371,19 @@ public class MimeMessageParser
     {
         return this.htmlContent != null;
     }
+
+    /** @return the html charset */
+    public String getHtmlCharset()
+    {
+        return htmlCharset;
+    }
+
+    /** @return the plaintext charset */
+    public String getPlainCharset()
+    {
+        return plainCharset;
+    }
+
 
     /** @return true if attachments are available */
     public boolean hasAttachments()
